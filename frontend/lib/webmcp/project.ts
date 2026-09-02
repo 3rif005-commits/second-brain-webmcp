@@ -19,6 +19,7 @@ import type {
   PropertyValue,
   ViewResponse,
 } from "@/lib/database/types";
+import { getGroupBySpec } from "@/lib/database/types";
 
 // ── Notes ────────────────────────────────────────────────────────────────
 
@@ -226,14 +227,11 @@ export function projectView(view: ViewResponse | undefined, properties: Property
       .join(", ");
     bits.push(`sorted by ${sorts}`);
   }
-  const groupBy = (view.config?.group_by ?? view.config?.groupBy) as
-    | { property?: string }
-    | string
-    | undefined;
-  if (groupBy) {
-    const key = typeof groupBy === "string" ? groupBy : groupBy.property;
-    bits.push(`grouped by ${nameOf(key)}`);
-  }
+  // `getGroupBySpec` rather than reading config.group_by by hand: the stored
+  // key is `property_key`, and guessing `property` here made every grouped
+  // view project as "grouped by ?" while looking perfectly fine in the UI.
+  const groupBy = getGroupBySpec(view.config ?? {});
+  if (groupBy) bits.push(`grouped by ${nameOf(groupBy.property_key)}`);
   return bits.join("; ");
 }
 
