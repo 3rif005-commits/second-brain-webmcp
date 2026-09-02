@@ -64,6 +64,7 @@ toasts all behave identically whether a person or an agent made the change.
 | `frontend/lib/webmcp/useWebMcpTools.ts` | React binding. Registration is keyed on tool *names*; implementations resolve late from a ref, so `toolchange` fires when capabilities change and not on every render. |
 | `frontend/lib/webmcp/project.ts` | The agent renderer — turns visual encodings back into text. |
 | `frontend/lib/webmcp/tools/database.ts` | Schema-generated database tools. |
+| `frontend/lib/webmcp/tools/note.ts` | Note tools. `note.read` returns the projection, and reads the live editor document so it reflects unsaved edits. |
 | `frontend/components/webmcp/AgentPanel.tsx` | Makes the surface visible and hand-runnable. |
 | `frontend/components/database/DatabaseShell.tsx` | The single wiring point — one `useWebMcpTools` call. |
 
@@ -78,6 +79,23 @@ toasts all behave identically whether a person or an agent made the change.
 | `db.<name>.switch-view` | write | Moves the user to another view. |
 | `db.<name>.set-grouping` | write | Regroups the board in front of them. |
 | `db.<name>.set-filter` | write | Filters the grid in front of them. |
+
+## Tools registered on a note page
+
+| Tool | | What it does |
+|---|---|---|
+| `note.read` | read | The note as an annotated outline — including callout semantics and the importance scale that a screenshot cannot convey. Reflects unsaved edits. |
+| `note.get-open` | read | Which note the user is looking at. |
+| `note.search` | read | Keyword search across notes. |
+| `note.append` | write | Appends Markdown; lands in the editor and is undoable. |
+| `note.set-mastery` | write | Sets the mastery badge. |
+| `note.open` | write | Navigates the user to another note. |
+
+## Verified
+
+- Production build: clean `npm ci` + `next build`, compiles successfully.
+- Test suite: 921 tests across 61 files, all passing.
+- Type-check: clean.
 
 ## Running it locally
 

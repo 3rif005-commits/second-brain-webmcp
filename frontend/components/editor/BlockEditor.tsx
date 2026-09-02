@@ -160,6 +160,13 @@ export interface BlockEditorHandle {
   /** Ids of the top-level blocks currently in the document. Used to prune
    *  anchors whose block the user has since deleted. */
   blockIds: () => string[];
+  /** The live document, including edits not yet autosaved. The WebMCP note
+   *  tools project this for agents — reading the persisted copy instead would
+   *  answer about the note as it was up to two seconds ago. */
+  getBlocks: () => AnyBlock[];
+  /** Append Markdown at the end. BlockNote parses it, so an agent can write
+   *  headings, lists and code fences without knowing the block schema. */
+  insertMarkdownAtEnd: (markdown: string) => Promise<void>;
 }
 
 export interface InteractiveBlock { title: string; html: string }
@@ -244,6 +251,18 @@ export const BlockEditor = forwardRef<BlockEditorHandle, BlockEditorProps>(
     );
 
     useImperativeHandle(ref, () => ({
+      getBlocks() {
+        return editor.document as AnyBlock[];
+      },
+      async insertMarkdownAtEnd(markdown: string) {
+        const parsed = (await editor.tryParseMarkdownToBlocks(markdown)) as AnyBlock[];
+        if (!parsed.length) return;
+        const doc = editor.document as AnyBlock[];
+        const last = doc[doc.length - 1];
+        // Same insert-after-last / replace-empty-doc shape as insertHtmlAtEnd.
+        if (last) editor.insertBlocks(parsed, last.id, "after");
+        else editor.replaceBlocks(editor.document, parsed);
+      },
       async exportMarkdown(title: string) {
         const md = await editor.blocksToMarkdownLossy(editor.document);
         const safeName = title.replace(/[^a-z0-9]/gi, "_").toLowerCase() || "note";

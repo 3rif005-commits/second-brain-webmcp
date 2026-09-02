@@ -4,6 +4,8 @@ import React, { Component, useState, useCallback, useEffect, useRef } from "reac
 import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
+import { useWebMcpTools } from "@/lib/webmcp/useWebMcpTools";
+import { buildNoteTools } from "@/lib/webmcp/tools/note";
 import { ChevronRight, Link, Check, Layers } from "lucide-react";
 import type { Note } from "@/lib/types/database";
 import { Button } from "@/components/ui/button";
@@ -185,6 +187,35 @@ export function NoteEditorPage({ note, collectionName }: NoteEditorPageProps) {
       }, 30_000);
     },
     [note.id]
+  );
+
+  // WebMCP: this note as tools, scoped to the note being viewed. `note.read`
+  // returns the projection rather than the raw blocks — callout semantics and
+  // the 0-6 importance scale reach a human as colour, and an agent reading
+  // pixels would lose both. Reads go through the editor handle, so they see
+  // unsaved edits rather than the last autosave.
+  const [masteryStatus, setMasteryStatus] = useState(note.mastery_status);
+  useWebMcpTools(`note:${note.id}`, () =>
+    buildNoteTools({
+      noteId: note.id,
+      title,
+      mastery: masteryStatus,
+      topics: note.topics ?? [],
+      getBlocks: () => editorRef.current?.getBlocks() ?? null,
+      appendMarkdown: async (markdown) => {
+        await editorRef.current?.insertMarkdownAtEnd(markdown);
+      },
+      setMastery: async (status) => {
+        setMasteryStatus(status as typeof note.mastery_status);
+        await fetch(`/api/notes/${note.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mastery_status: status }),
+        });
+        window.dispatchEvent(new Event("notes-changed"));
+      },
+      openNote: (id) => router.push(`/brain/${id}`),
+    })
   );
 
   async function confirmDelete() {

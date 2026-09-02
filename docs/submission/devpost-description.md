@@ -72,6 +72,7 @@ Five modules and a single wiring point:
 | `lib/webmcp/useWebMcpTools.ts` | React binding. Registration is keyed on tool *names* while implementations resolve late from a ref, so tools always act on current state but `toolchange` fires only when capabilities genuinely change — not on every render. |
 | `lib/webmcp/project.ts` | The agent renderer. |
 | `lib/webmcp/tools/database.ts` | Schema-generated database tools. |
+| `lib/webmcp/tools/note.ts` | Note tools. `note.read` returns the projection and reads the live editor document, so it reflects edits the two-second autosave has not written yet — which is exactly when a user is most likely to be asking about the sentence they just typed. |
 | `components/webmcp/AgentPanel.tsx` | Lists what's registered and runs any of it by hand, so the integration is verifiable on a browser without the API. |
 
 The architectural bet is that WebMCP should be a *delivery channel*, not a
