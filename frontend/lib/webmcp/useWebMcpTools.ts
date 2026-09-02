@@ -16,6 +16,7 @@
 
 import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { webmcp } from "./registry";
+import type { ToolCallRecord } from "./registry";
 import type { WebMcpResult, WebMcpToolDef } from "./types";
 import { errorResult } from "./types";
 
@@ -65,16 +66,21 @@ export function useWebMcpTools(
 
 /** Subscribe a component to registry changes — used by the inspector panel
  *  and the status badge. */
+/** Stable identities for the server/prerender pass. Returning a fresh `[]`
+ *  here is the same infinite-loop trap as an uncached client snapshot. */
+const NO_TOOLS: WebMcpToolDef[] = [];
+const NO_CALLS: ToolCallRecord[] = [];
+
 export function useWebMcpSnapshot() {
   const tools = useSyncExternalStore(
     (cb) => webmcp.subscribe(cb),
     () => webmcp.list(),
-    () => [] as WebMcpToolDef[]
+    () => NO_TOOLS
   );
   const calls = useSyncExternalStore(
     (cb) => webmcp.subscribe(cb),
     () => webmcp.recentCalls(),
-    () => []
+    () => NO_CALLS
   );
   return { tools, calls, support: webmcp.support };
 }

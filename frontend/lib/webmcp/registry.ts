@@ -76,6 +76,15 @@ let callSeq = 0;
 
 class WebMcpRegistry {
   private tools = new Map<string, Registration>();
+  /** Cached result of `list()`.
+   *
+   *  `useSyncExternalStore` compares snapshots by identity and re-renders when
+   *  they differ, so a getSnapshot that allocates a fresh array on every call
+   *  never converges — React re-renders, sees a new array, re-renders again,
+   *  and the component tree dies with "The result of getSnapshot should be
+   *  cached". Rebuilding only inside `emit()` keeps the reference stable
+   *  between real changes. */
+  private toolsSnapshot: WebMcpToolDef[] = [];
   private listeners = new Set<Listener>();
   private callListeners = new Set<CallListener>();
   private calls: ToolCallRecord[] = [];
@@ -180,7 +189,7 @@ class WebMcpRegistry {
   }
 
   list(): WebMcpToolDef[] {
-    return [...this.tools.values()].map((r) => r.def);
+    return this.toolsSnapshot;
   }
 
   scopeOf(name: string): string | undefined {
@@ -262,6 +271,10 @@ class WebMcpRegistry {
   }
 
   private emit() {
+    // Rebuild the snapshot exactly once per change, before notifying, so every
+    // subscriber reading `list()` during the resulting render sees one stable
+    // reference.
+    this.toolsSnapshot = [...this.tools.values()].map((r) => r.def);
     for (const fn of this.listeners) fn();
   }
 }
