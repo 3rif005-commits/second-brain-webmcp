@@ -1,0 +1,446 @@
+/* @import must come before all other rules */
+@import "@blocknote/mantine/style.css";
+@import "@blocknote/xl-ai/style.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #ffffff;
+  --foreground: #0f0f0f;
+  --sidebar-width: 260px;
+  --sidebar-bg: #f9fafb;
+  --sidebar-border: #e5e7eb;
+}
+
+.dark {
+  --background: #111827;
+  --foreground: #f9fafb;
+}
+
+/* ---------------------------------------------------------------------------
+ * Database UI primitives — design tokens
+ *
+ * MEASURED from live Notion via getComputedStyle on 2026-08-31, not eyeballed
+ * from screenshots. Provenance and the measuring method are recorded in
+ * docs/superpowers/specs/2026-08-28-notion-databases-ui-parity-design.md §5.
+ *
+ * Two things here are NOT simple light/dark colour swaps, and must not be
+ * "simplified" into one:
+ *   1. --menu-shadow has different OFFSETS AND BLUR per theme, not just colour.
+ *   2. In light the 1px edge is the shadow's third layer at 7% alpha; in dark
+ *      it is an OPAQUE rgb(56,56,54) ring. Neither theme uses a real border.
+ * ------------------------------------------------------------------------- */
+:root {
+  /* surface */
+  --menu-bg: #ffffff;
+  --menu-radius: 10px;
+  --menu-shadow:
+    rgba(25, 25, 25, 0.05) 0 20px 24px 0,
+    rgba(25, 25, 25, 0.027) 0 5px 8px 0,
+    rgba(42, 28, 0, 0.07) 0 0 0 1px;
+  --menu-divider: rgba(42, 28, 0, 0.07);
+
+  /* rows */
+  --menu-row-height: 28px;
+  --menu-row-padding-x: 8px;
+  --menu-row-hover-bg: rgba(33, 27, 23, 0.051);
+  --menu-fg: rgb(44, 44, 43);
+  --menu-fg-disabled: rgb(188, 186, 182);
+
+  /* type + icon */
+  --menu-label-size: 14px;
+  --menu-icon-box: 20px;
+
+  /* embedded controls */
+  --menu-field-bg: rgba(66, 35, 3, 0.03);
+  --menu-badge-bg: rgba(0, 124, 215, 0.094);
+
+  /* widths — each observed on a real surface, see the design doc §5 */
+  --menu-width-sm: 248px;   /* column header menu, row menu */
+  --menu-width-md: 285px;   /* filter quick-picker */
+  --menu-width-lg: 378px;   /* property type picker */
+  --config-sidebar-width: 483px; /* view settings / property config sidebar */
+}
+
+.dark {
+  --menu-bg: rgb(37, 37, 37);
+  --menu-shadow:
+    rgb(56, 56, 54) 0 0 0 1px,
+    rgba(25, 25, 25, 0.2) 0 14px 28px -6px,
+    rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
+  --menu-divider: rgba(255, 255, 243, 0.082);
+
+  --menu-row-hover-bg: rgba(255, 255, 255, 0.055);
+  --menu-fg: rgb(240, 239, 237);
+  --menu-fg-disabled: rgb(95, 94, 89);
+
+  --menu-field-bg: rgba(252, 252, 252, 0.03);
+  --menu-badge-bg: rgba(67, 155, 255, 0.24);
+}
+
+/* @mention inline links */
+.mention-link {
+  color: #6366f1;
+  font-weight: 500;
+  text-decoration: none;
+  border-radius: 3px;
+  padding: 0 2px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+.mention-link:hover {
+  background-color: rgba(99, 102, 241, 0.1);
+  text-decoration: underline;
+}
+
+/* Callout blocks — visually merge the colored box with its children.
+ *
+ * BlockNote renders a block's children inside a sibling `.bn-block-group`
+ * div (see .bn-block's `content: "blockContent blockGroup?"` in
+ * @blocknote/core's BlockContainer node), NOT nested inside the block's own
+ * `.bn-block-content`. So a callout's body (paragraphs, lists, the math
+ * block, etc — attached via calloutChildren.ts) renders as a plain sibling
+ * div below the colored box instead of visually "inside" it.
+ *
+ * CalloutBlockSpec (customBlocks.tsx) doesn't set these attributes itself —
+ * BlockNote sets them automatically from the block's props: every block's
+ * `.bn-block-content` gets `data-content-type="<blockType>"`, and
+ * `data-<kebab-prop>="<value>"` for every non-default prop (so
+ * `data-callout-type` is present for every type except the default, "NOTE").
+ * Confirmed against node_modules/@blocknote/react/src/schema/ReactBlockSpec.tsx
+ * (BlockContentWrapper) and node_modules/@blocknote/core/src/schema/blocks/internal.ts
+ * (propsToAttributes).
+ */
+
+/* Square off the callout box's bottom edge when it has children below it,
+ * so the box and the extended .bn-block-group below read as one card. */
+.bn-block-content[data-content-type="callout"]:has(+ .bn-block-group) > div {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 10px;
+}
+
+/* Extend the callout's background/border down into its children. */
+.bn-block-content[data-content-type="callout"] + .bn-block-group {
+  padding: 2px 12px 10px;
+  border-left-width: 1px;
+  border-right-width: 1px;
+  border-bottom-width: 1px;
+  border-style: solid;
+  border-bottom-left-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+  margin-top: -1px;
+}
+
+/* One rule pair per callout type/color (CALLOUT_PALETTE in customBlocks.tsx).
+ * NOTE has no `data-callout-type` attribute because it's the prop's default
+ * value — BlockNote omits data attributes for default prop values — hence
+ * the `:not([data-callout-type])` fallback selector for it specifically. */
+.bn-block-content[data-content-type="callout"]:not([data-callout-type]) + .bn-block-group {
+  background-color: #f9fafb; border-color: #d1d5db; /* NOTE — gray */
+}
+.dark .bn-block-content[data-content-type="callout"]:not([data-callout-type]) + .bn-block-group {
+  background-color: rgba(31, 41, 55, 0.4); border-color: #4b5563;
+}
+
+.bn-block-content[data-callout-type="OVERVIEW"] + .bn-block-group {
+  background-color: #eff6ff; border-color: #93c5fd; /* blue */
+}
+.dark .bn-block-content[data-callout-type="OVERVIEW"] + .bn-block-group {
+  background-color: rgba(30, 58, 138, 0.2); border-color: #1d4ed8;
+}
+
+.bn-block-content[data-callout-type="TIP"] + .bn-block-group {
+  background-color: #f0fdf4; border-color: #86efac; /* green */
+}
+.dark .bn-block-content[data-callout-type="TIP"] + .bn-block-group {
+  background-color: rgba(20, 83, 45, 0.2); border-color: #15803d;
+}
+
+.bn-block-content[data-callout-type="IMPORTANT"] + .bn-block-group {
+  background-color: #fefce8; border-color: #fde047; /* yellow */
+}
+.dark .bn-block-content[data-callout-type="IMPORTANT"] + .bn-block-group {
+  background-color: rgba(113, 63, 18, 0.2); border-color: #a16207;
+}
+
+.bn-block-content[data-callout-type="WARNING"] + .bn-block-group {
+  background-color: #fff7ed; border-color: #fdba74; /* orange */
+}
+.dark .bn-block-content[data-callout-type="WARNING"] + .bn-block-group {
+  background-color: rgba(124, 45, 18, 0.2); border-color: #c2410c;
+}
+
+.bn-block-content[data-callout-type="CAUTION"] + .bn-block-group {
+  background-color: #fef2f2; border-color: #fca5a5; /* red */
+}
+.dark .bn-block-content[data-callout-type="CAUTION"] + .bn-block-group {
+  background-color: rgba(127, 29, 29, 0.2); border-color: #b91c1c;
+}
+
+.bn-block-content[data-callout-type="FORMULA"] + .bn-block-group {
+  background-color: #faf5ff; border-color: #d8b4fe; /* purple */
+}
+.dark .bn-block-content[data-callout-type="FORMULA"] + .bn-block-group {
+  background-color: rgba(88, 28, 135, 0.2); border-color: #7e22ce;
+}
+
+.bn-block-content[data-callout-type="ANALOGY"] + .bn-block-group {
+  background-color: #f5efe8; border-color: #c9a876; /* brown */
+}
+.dark .bn-block-content[data-callout-type="ANALOGY"] + .bn-block-group {
+  background-color: rgba(58, 47, 34, 0.4); border-color: #7a6142;
+}
+
+.bn-block-content[data-callout-type="EXAM"] + .bn-block-group {
+  background-color: #fdf2f8; border-color: #f9a8d4; /* pink */
+}
+.dark .bn-block-content[data-callout-type="EXAM"] + .bn-block-group {
+  background-color: rgba(131, 24, 67, 0.2); border-color: #be185d;
+}
+
+@media print {
+  /* Hide all UI chrome */
+  .no-print { display: none !important; }
+
+  /* Reset page geometry so content isn't clipped */
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  /* Flatten the app shell flex layout */
+  .print-layout {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Main area takes full width */
+  .print-main {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    min-width: 0 !important;
+  }
+
+  /* The editor's own scroll wrapper must not clip */
+  .print-scroll {
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
+  /* Note content: full width, readable margins */
+  .print-content {
+    max-width: 100% !important;
+    padding: 0 24px !important;
+  }
+
+  /* Force white background on editor panes */
+  .print-main * {
+    background-color: transparent !important;
+    color: #000 !important;
+  }
+
+  /* Title input: browsers hide inputs in print by default */
+  input[type="text"], input:not([type]) {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Page breaks */
+  p, h1, h2, h3, h4, li { page-break-inside: avoid; }
+
+  /* BlockNote internal scroll containers */
+  [data-bn-container], .bn-editor, .ProseMirror {
+    overflow: visible !important;
+    height: auto !important;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar — thin and subtle */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* Remove browser default outlines — components handle their own focus styles */
+:focus-visible {
+  outline: none;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Workspace design system
+   A handful of primitives the workspace shell composes with Tailwind: layered
+   surfaces, glass overlays, and the motion tokens. Kept here (rather than
+   repeated as long class strings) so every panel, dock and drawer shares one
+   set of elevations and timings.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Recessed canvas the panels float on. */
+.ws-canvas {
+  background:
+    radial-gradient(120% 90% at 50% -20%, rgba(99, 102, 241, 0.07), transparent 60%),
+    #f3f4f6;
+}
+.dark .ws-canvas {
+  background:
+    radial-gradient(120% 90% at 50% -20%, rgba(99, 102, 241, 0.13), transparent 60%),
+    #0a0c12;
+}
+
+/* A raised content surface. */
+.ws-panel {
+  background: #ffffff;
+  border: 1px solid rgba(17, 24, 39, 0.07);
+  box-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 12px 32px -20px rgba(16, 24, 40, 0.35);
+}
+.dark .ws-panel {
+  background: #11141c;
+  border-color: rgba(255, 255, 255, 0.07);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 16px 40px -24px rgba(0, 0, 0, 0.9);
+}
+
+/* Frosted overlay — floating docks, action popovers, menus. */
+.ws-glass {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  box-shadow: 0 8px 32px -8px rgba(16, 24, 40, 0.25);
+}
+.dark .ws-glass {
+  background: rgba(20, 23, 31, 0.82);
+  border-color: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.7);
+}
+
+/* Frosted overlay that always reads dark — used over media. */
+.ws-glass-dark {
+  background: rgba(16, 18, 25, 0.72);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 40px -12px rgba(0, 0, 0, 0.8);
+}
+
+/* The one accent gradient. Primary actions only — never decoration. */
+.ws-accent {
+  background-image: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: #fff;
+  box-shadow:
+    0 1px 2px rgba(79, 70, 229, 0.4),
+    0 8px 20px -8px rgba(99, 102, 241, 0.7);
+}
+.ws-accent:hover:not(:disabled) {
+  background-image: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+}
+
+/* Horizontal strips that scroll but must not show a bar. */
+.ws-scroll-x {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.ws-scroll-x::-webkit-scrollbar { display: none; }
+
+/* ── motion ─────────────────────────────────────────────────────────────── */
+@keyframes ws-rise {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.ws-rise { animation: ws-rise 0.18s cubic-bezier(0.22, 1, 0.36, 1); }
+
+@keyframes ws-slide-in {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.ws-slide-in { animation: ws-slide-in 0.22s cubic-bezier(0.22, 1, 0.36, 1); }
+
+/* Text that is being generated right now. */
+@keyframes ws-shimmer {
+  to { background-position: -200% 0; }
+}
+.ws-shimmer {
+  background: linear-gradient(
+    90deg,
+    currentColor 0%, currentColor 35%,
+    rgba(255, 255, 255, 0.95) 50%,
+    currentColor 65%, currentColor 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: ws-shimmer 2s linear infinite;
+}
+.dark .ws-shimmer {
+  background: linear-gradient(
+    90deg,
+    #6366f1 0%, #6366f1 35%,
+    #c7d2fe 50%,
+    #6366f1 65%, #6366f1 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* A live recording indicator. */
+@keyframes ws-ping-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55); }
+  70%  { box-shadow: 0 0 0 7px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+.ws-recording { animation: ws-ping-ring 1.6s ease-out infinite; }
+
+/* Indeterminate progress sliver, for a source that is still being processed. */
+@keyframes ws-indeterminate {
+  0%   { transform: translateX(-100%) scaleX(0.4); }
+  50%  { transform: translateX(20%)   scaleX(0.7); }
+  100% { transform: translateX(160%)  scaleX(0.4); }
+}
+.ws-indeterminate {
+  animation: ws-indeterminate 1.5s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  transform-origin: left;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ws-rise, .ws-slide-in, .ws-shimmer, .ws-recording, .ws-indeterminate {
+    animation: none;
+  }
+  .ws-shimmer { color: inherit; -webkit-background-clip: border-box; background-clip: border-box; background: none; }
+}

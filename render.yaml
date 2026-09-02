@@ -1,0 +1,40 @@
+# Render blueprint for the Second Brain API.
+#
+# The WebMCP tools in the frontend read and write through this service for
+# everything under /db — the databases engine (views, filters, grouping,
+# formulas, rollups). It needs Postgres and nothing else: routers/databases.py
+# imports no LLM or embedding code, so no model server is required here.
+#
+# Set the secret env vars in the Render dashboard, not in this file.
+services:
+  - type: web
+    name: second-brain-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12"
+      # Turns on the databases query engine. Without it every /db route
+      # short-circuits and the WebMCP database tools have nothing to call.
+      - key: DATABASE_ROWS_ENABLED
+        value: "true"
+      # Must match the deployed frontend exactly — main.py passes this
+      # straight to the CORS middleware's allow_origins.
+      - key: FRONTEND_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+      # Supabase's Supavisor pooler, port 6543. connection.py already
+      # disables asyncpg's prepared-statement cache for transaction-mode
+      # pooling — do not point this at a direct connection expecting that
+      # setting to be tuned back on.
+      - key: DATABASE_URL
+        sync: false

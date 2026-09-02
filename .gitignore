@@ -1,0 +1,12 @@
+node_modules/
+.next/
+.venv/
+venv/
+__pycache__/
+*.pyc
+.env
+.env.local
+tsconfig.tsbuildinfo
+test-results/
+playwright-report/
+.DS_Store

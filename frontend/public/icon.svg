@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="#5B6FE0"/>
+
+  <!-- Left hemisphere — D-shape, flat side facing right -->
+  <path d="M 256,100
+           C 215,100 162,118 128,158
+           C 94,198 80,248 86,296
+           C 92,344 118,388 158,412
+           C 190,430 224,432 256,428
+           L 256,100 Z"
+        fill="#F4EFE8"/>
+
+  <!-- Right hemisphere — D-shape, flat side facing left -->
+  <path d="M 256,100
+           C 297,100 350,118 384,158
+           C 418,198 432,248 426,296
+           C 420,344 394,388 354,412
+           C 322,430 288,432 256,428
+           L 256,100 Z"
+        fill="#F4EFE8"/>
+
+  <!-- Center fissure -->
+  <rect x="249" y="100" width="14" height="328" rx="7" fill="#5B6FE0"/>
+
+  <!-- Amber accent — single neural node, top center -->
+  <circle cx="256" cy="92" r="18" fill="#E8A94D"/>
+
+</svg>
