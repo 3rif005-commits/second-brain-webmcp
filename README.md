@@ -2,9 +2,10 @@
 
 **The WebMCP Challenge submission.**
 
-- **Live app:** _TODO_
+- **Live app:** https://second-brain-webmcp.vercel.app
 - **Demo video (< 3 min):** _TODO_
-- **Judge login:** `demo@secondbrain.app` / _TODO_ — seeded with notes and a Reading List database.
+- **Judge login:** `demo@secondbrain.app` / `WebMCP-Demo-2026`
+- **Straight to the database:** https://second-brain-webmcp.vercel.app/brain/db/e03b0c0b-0821-4e60-b1cd-6f4f4d1cdfba — a seeded Reading List, 12 rows.
 
 > No Chrome 149? The app still demonstrates everything. Open the **"N agent tools"**
 > pill in the bottom-right: it lists every tool registered for the page you are on
@@ -93,6 +94,7 @@ toasts all behave identically whether a person or an agent made the change.
 
 ## Verified
 
+- Deployed and live: frontend on Vercel, API on Render, Postgres on Supabase.
 - Production build: clean `npm ci` + `next build`, compiles successfully.
 - Test suite: 921 tests across 61 files, all passing.
 - Type-check: clean.

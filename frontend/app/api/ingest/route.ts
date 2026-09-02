@@ -1,7 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 
-// Allow up to 15 minutes for local LLM ingest (CPU-only is slow)
-export const maxDuration = 900;
+// Local CPU-only ingest can take ~15 minutes, but a hosted deploy cannot wait
+// that long: Vercel caps a Serverless Function at 300s on Hobby (and rejects
+// the deploy outright, rather than clamping, if the value is higher). 300 is
+// the ceiling that both environments accept — a long local ingest still runs,
+// it just isn't proxied through this route with a 15-minute budget.
+export const maxDuration = 300;
 
 // POST /api/ingest — proxy to FastAPI ingest service with JWT forwarding
 // Body: FormData with file | { url: string }

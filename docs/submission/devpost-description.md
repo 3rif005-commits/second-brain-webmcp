@@ -7,6 +7,14 @@ the rules ask a submission to explain._
 
 ## Second Brain — a knowledge app that renders itself twice
 
+**Live:** https://second-brain-webmcp.vercel.app · **Sign in:** `demo@secondbrain.app` / `WebMCP-Demo-2026`
+**Go straight to the demo database:** https://second-brain-webmcp.vercel.app/brain/db/e03b0c0b-0821-4e60-b1cd-6f4f4d1cdfba
+
+> Not on Chrome 149? Everything is still demonstrable. Open the **"N agent tools"**
+> pill at the bottom-right: it lists every tool registered for the page you are on
+> and runs any of them by hand, so you can watch the UI change with no agent in the
+> loop.
+
 A web app has exactly one representation: pixels. Everything it knows is encoded
 into a visual layout, and to act on it an agent has to decode that layout back
 into intent — screenshot, guess a coordinate, click, screenshot again to find out
