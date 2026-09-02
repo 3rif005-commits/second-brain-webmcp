@@ -197,19 +197,45 @@ export function buildDatabaseTools(ctx: DatabaseToolContext): WebMcpToolDef[] {
     ? ctx.groups.reduce((n, g) => n + g.row_count, 0)
     : ctx.rows.length;
 
+  /** Reject a select/status/multi_select value that is not one of the
+   *  property's configured options.
+   *
+   *  The generated inputSchema already advertises the valid enum, but an
+   *  advertised enum is guidance, not enforcement: nothing in the browser
+   *  validates a tool's arguments against its schema before `execute` runs,
+   *  and the API accepts an unknown option name verbatim. Without this, a
+   *  model that guesses "In Progress" for a database whose option is
+   *  "Reading" silently writes a status no filter will ever match. */
+  const invalidOption = (prop: PropertyResponse, raw: unknown): string | null => {
+    if (!["select", "status", "multi_select"].includes(prop.type)) return null;
+    const options = optionNames(prop);
+    if (!options.length) return null;
+    const given = Array.isArray(raw) ? raw.map(String) : [String(raw)];
+    const bad = given.filter((v) => v !== "" && !options.includes(v));
+    if (!bad.length) return null;
+    return `${prop.name} has no option ${bad.map((b) => `"${b}"`).join(", ")}. ` +
+      `Valid: ${options.join(" | ")}`;
+  };
+
   const applyValues = async (rowId: string, values: Record<string, unknown>) => {
     const applied: string[] = [];
     const skipped: string[] = [];
+    const rejected: string[] = [];
     for (const [key, raw] of Object.entries(values ?? {})) {
       const prop = findProperty(ctx.properties, key);
       if (!prop || READ_ONLY_TYPES.has(prop.type)) {
         skipped.push(key);
         continue;
       }
+      const problem = invalidOption(prop, raw);
+      if (problem) {
+        rejected.push(problem);
+        continue;
+      }
       await ctx.updateCell(rowId, prop.key, toWireValue(prop, raw));
       applied.push(prop.name);
     }
-    return { applied, skipped };
+    return { applied, skipped, rejected };
   };
 
   const tools: WebMcpToolDef[] = [
@@ -289,13 +315,23 @@ export function buildDatabaseTools(ctx: DatabaseToolContext): WebMcpToolDef[] {
           return errorResult(`Could not create the row (HTTP ${res.status}).`);
         }
         const created = (await res.json()) as { id: string };
-        const { applied, skipped } = await applyValues(created.id, values);
+        const { applied, skipped, rejected } = await applyValues(created.id, values);
         await ctx.refetchRows();
-        return text(
-          `Created row ${created.id} in ${ctx.databaseName}` +
-            (applied.length ? `, set ${applied.join(", ")}` : "") +
-            (skipped.length ? `. Ignored unknown or computed properties: ${skipped.join(", ")}` : ".")
-        );
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text:
+                `Created row ${created.id} in ${ctx.databaseName}` +
+                (applied.length ? `, set ${applied.join(", ")}` : "") +
+                (skipped.length
+                  ? `. Ignored unknown or computed properties: ${skipped.join(", ")}`
+                  : ".") +
+                (rejected.length ? ` NOT set — ${rejected.join(" ")}` : ""),
+            },
+          ],
+          isError: rejected.length > 0,
+        };
       },
     },
 
@@ -315,19 +351,29 @@ export function buildDatabaseTools(ctx: DatabaseToolContext): WebMcpToolDef[] {
       execute: async (input) => {
         const rowId = String(input?.rowId ?? "");
         if (!rowId) return errorResult("rowId is required.");
-        const { applied, skipped } = await applyValues(
+        const { applied, skipped, rejected } = await applyValues(
           rowId,
           (input?.values ?? {}) as Record<string, unknown>
         );
         if (!applied.length) {
           return errorResult(
-            `Nothing was written. Writable properties are: ${writable.map((p) => p.name).join(", ")}`
+            rejected.length
+              ? rejected.join(" ")
+              : `Nothing was written. Writable properties are: ${writable.map((p) => p.name).join(", ")}`
           );
         }
-        return text(
-          `Updated ${applied.join(", ")} on row ${rowId}` +
-            (skipped.length ? `. Ignored: ${skipped.join(", ")}` : ".")
-        );
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text:
+                `Updated ${applied.join(", ")} on row ${rowId}` +
+                (skipped.length ? `. Ignored: ${skipped.join(", ")}` : ".") +
+                (rejected.length ? ` NOT set — ${rejected.join(" ")}` : ""),
+            },
+          ],
+          isError: rejected.length > 0,
+        };
       },
     },
 
